@@ -3,12 +3,13 @@ package main
 import (
 	log "github.com/sirupsen/logrus"
 	"os"
-	"taskmaster/api"
 )
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
+	log.SetLevel(log.TraceLevel)
 
-	api.Listen(5000)
+	InitialiseRedis()
+	StartApi(5000)
 }

@@ -1,4 +1,4 @@
-package id
+package main
 
 import (
 	"github.com/speps/go-hashids"
