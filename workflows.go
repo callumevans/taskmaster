@@ -84,7 +84,7 @@ func addTaskToWorkflow(workflow Workflow, task Task) {
 			stageWorkers, _ := MatchWorkers(workflowWorkers, stage.WorkerMatchFunction, task)
 
 			if len(stageWorkers) < 1 && stage.SkipIfNoMatches {
-				logrus.Infof("No workers found for Workflow %s Stage %s. Skipping stage.",
+				logrus.Infof("No workers found for Workflow %s Stage %d. Skipping stage.",
 					workflow.Id, stage.Order)
 				break
 			}
