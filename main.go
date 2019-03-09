@@ -3,6 +3,7 @@ package main
 import (
 	log "github.com/sirupsen/logrus"
 	"os"
+	"taskmaster/websockets"
 )
 
 func main() {
@@ -11,5 +12,10 @@ func main() {
 	log.SetLevel(log.TraceLevel)
 
 	InitialiseRedis()
-	StartApi(5000)
+
+	hub := websockets.NewHub()
+	go hub.Run()
+	go websockets.ListenForReservations(client, hub)
+
+	StartApi(5000, hub)
 }

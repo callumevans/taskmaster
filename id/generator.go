@@ -1,4 +1,4 @@
-package main
+package id
 
 import (
 	"github.com/speps/go-hashids"
@@ -20,3 +20,4 @@ func GenerateId() string {
 	id, _ := hash.Encode([]int{int(time.Now().UnixNano()), rand.Int()})
 	return id
 }
+

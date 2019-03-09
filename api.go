@@ -6,10 +6,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+	"taskmaster/websockets"
 	"time"
 )
 
-func StartApi(port int) {
+func StartApi(port int, hub *websockets.Hub) {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/workers", GetWorkersHandler).Methods(http.MethodGet)
@@ -19,6 +20,10 @@ func StartApi(port int) {
 	r.HandleFunc("/workflows", CreateWorkflowHandler).Methods(http.MethodPost)
 
 	r.HandleFunc("/tasks", CreateTaskHandler).Methods(http.MethodPost)
+
+	r.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		websockets.ServeWs(hub, w, r)
+	})
 
 	r.HandleFunc("/healthz", HealthzHandler)
 

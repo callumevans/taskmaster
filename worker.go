@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/go-redis/redis"
+	"taskmaster/id"
 )
 
 type Worker struct {
@@ -24,7 +25,7 @@ func GetWorkers() ([]Worker, error) {
 }
 
 func CreateWorker(worker Worker) (*Worker, error) {
-	worker.Id = GenerateId()
+	worker.Id = id.GenerateId()
 
 	_, err := GetJsonClient().JSONArrAppend("workers", ".", worker)
 

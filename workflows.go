@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
+	"taskmaster/id"
 	"time"
 )
 
@@ -19,6 +20,11 @@ type WorkflowStage struct {
 	WorkerMatchFunction string `json:"workerMatchFunction"`
 	StageTimeout int64 `json:"stageTimeout"`
 	SkipIfNoMatches bool `json:"skipIfNoMatches"`
+}
+
+type Message struct {
+	TargetWorker string `json:"targetWorker"`
+	Message map[string]interface{} `json:"message"`
 }
 
 const evaluationInterval = 5
@@ -38,7 +44,7 @@ func GetWorkflows() ([]Workflow, error) {
 }
 
 func CreateWorkflow(workflow Workflow) (*Workflow, error) {
-	workflow.Id = GenerateId()
+	workflow.Id = id.GenerateId()
 
 	for index, stage := range workflow.Stages {
 		if stage.StageTimeout <= 0 {
@@ -65,7 +71,7 @@ func CreateTask(task Task) (*Task, error) {
 
 	for _, workflow := range workflows {
 		if workflow.Id == task.WorkflowId {
-			task.Id = GenerateId()
+			task.Id = id.GenerateId()
 			go addTaskToWorkflow(workflow, task)
 			return &task, nil
 		}
@@ -84,13 +90,23 @@ func addTaskToWorkflow(workflow Workflow, task Task) {
 			stageWorkers, _ := MatchWorkers(workflowWorkers, stage.WorkerMatchFunction, task)
 
 			if len(stageWorkers) < 1 && stage.SkipIfNoMatches {
-				logrus.Infof("No workers found for Workflow %s Stage %d. Skipping stage.",
+				logrus.Tracef("No workers found for Workflow %s Stage %d. Skipping stage.",
 					workflow.Id, stage.Order)
 				break
 			}
 
 			for _, worker := range stageWorkers {
-				logrus.Tracef("Worker %s pinged with task %s", worker.Id, task.Id)
+				var reservationMessage = Message{
+					TargetWorker: worker.Id,
+					Message: map[string]interface{}{
+						"Task": task,
+					},
+				}
+
+				var messageJson, _ = json.Marshal(reservationMessage)
+				client.Publish("worker_reservations", string(messageJson))
+
+				logrus.Tracef("Pinged worker %s with task %s", worker.Id, task.Id)
 			}
 
 			time.Sleep(evaluationInterval * time.Second)
