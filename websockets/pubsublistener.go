@@ -1,11 +1,9 @@
 package websockets
 
-import (
-	"github.com/go-redis/redis"
-)
+import "taskmaster/redis"
 
-func ListenForReservations(redisClient *redis.Client, hub *Hub) {
-	pubsub := redisClient.Subscribe("worker_reservations")
+func ListenForReservations(redis redis.Connection, hub *Hub) {
+	pubsub := redis.Client.Subscribe("worker_reservations")
 
 	_, err := pubsub.Receive()
 
