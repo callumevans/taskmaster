@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -41,6 +42,95 @@ func StartApi(port int, hub *websockets.Hub) {
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("API failed to start: %s", err)
 	}
+}
+
+func GetWorkersHandler(w http.ResponseWriter, r *http.Request) {
+	workers, _ := GetWorkers()
+
+	toJson(w, r, map[string]interface{}{
+		"workers": workers,
+	}, http.StatusOK)
+}
+
+func CreateWorkerHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+
+	var worker Worker
+	err := decoder.Decode(&worker)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	created, err := CreateWorker(worker)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	toJson(w, r, &created, http.StatusCreated)
+}
+
+func CreateWorkflowHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+
+	var workflow Workflow
+	err := decoder.Decode(&workflow)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	created, err := CreateWorkflow(workflow)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	toJson(w, r, &created, http.StatusCreated)
+}
+
+func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+
+	var task Task
+	err := decoder.Decode(&task)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	created, err := CreateTask(task)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if created == nil {
+		http.Error(w, "Could not find a workflow to match task with", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	encoder := json.NewEncoder(w)
+	encoder.Encode(created)
+}
+
+func toJson(w http.ResponseWriter, r *http.Request, result interface{}, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	encoder := json.NewEncoder(w)
+
+	_ = encoder.Encode(result)
 }
 
 func logging() func(http.Handler) http.Handler {

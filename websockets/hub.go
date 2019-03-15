@@ -50,6 +50,8 @@ func (h *Hub) Run() {
 				close(client.send)
 			}
 		case message := <-h.broadcast:
+			logrus.Tracef("Hub broadcasting message: %s", message)
+
 			var parsedMessage Message
 			err := json.Unmarshal(message, &parsedMessage)
 
@@ -60,6 +62,7 @@ func (h *Hub) Run() {
 
 			for client := range h.clients {
 				if client.workerId == parsedMessage.TargetWorker || parsedMessage.TargetWorker == "" {
+					logrus.Tracef("Broadcasting message %s to Worker %s", message, client.workerId)
 					select {
 					case client.send <- message:
 					default:

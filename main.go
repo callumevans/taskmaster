@@ -1,25 +1,35 @@
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/go-redis/redis"
+	"github.com/sirupsen/logrus"
 	"os"
-	"taskmaster/redis"
+	"taskmaster/datastore"
+	"taskmaster/pubsub"
 	"taskmaster/websockets"
 )
 
-var redisConnection redis.Connection
+var Store *datastore.DataStore
+var RedisClient *redis.Client
 
 func main() {
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.TraceLevel)
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.SetOutput(os.Stdout)
+	logrus.SetLevel(logrus.TraceLevel)
 
-	redisConnection = redis.InitialiseRedis()
+	Store = datastore.CreateStore()
+	redisClient, err := pubsub.CreateRedis()
+
+	if err != nil {
+		logrus.Panicf("Error connecting to redis: %s", err)
+	}
+
+	RedisClient = redisClient
 
 	hub := websockets.NewHub()
-
 	go hub.Run()
-	go websockets.ListenForReservations(redisConnection, hub)
+	go websockets.ListenForReservations(RedisClient, hub)
 
 	StartApi(5000, hub)
+
 }

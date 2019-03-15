@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-var workerTestData = []Worker {
+var workerTestData = []WorkerDto{
 	{
 		Id: "1",
 		Attributes: map[string]interface{}{

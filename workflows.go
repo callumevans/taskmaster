@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"taskmaster/id"
@@ -23,11 +22,6 @@ type WorkflowStage struct {
 	SkipIfNoMatches bool `json:"skipIfNoMatches"`
 }
 
-type Task struct {
-	Id string `json:"id"`
-	WorkflowId string `json:"workflowId"`
-	Attributes interface{} `json:"attributes"`
-}
 
 type Message struct {
 	TargetWorker string `json:"targetWorker"`
@@ -48,76 +42,21 @@ func GetWorkflowsHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func CreateWorkflowHandler(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-
-	var workflow Workflow
-	err := decoder.Decode(&workflow)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	created, err := CreateWorkflow(workflow)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-
-	encoder := json.NewEncoder(w)
-	encoder.Encode(created)
-}
-
-func CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-
-	var task Task
-	err := decoder.Decode(&task)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	created, err := CreateTask(task)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if created == nil {
-		http.Error(w, "Could not find a workflow to match task with", http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-
-	encoder := json.NewEncoder(w)
-	encoder.Encode(created)
-}
-
 func GetWorkflows() ([]Workflow, error) {
-	res, err := redisConnection.JsonClient.JSONGet("workflows", ".")
-
-	if err != nil && err != redis.Nil {
-		return nil, err
-	}
+	session := Store.Session.Clone()
+	defer session.Close()
 
 	var workflows []Workflow
-	_ = json.Unmarshal(res.([]byte), &workflows)
 
-	return workflows, nil
+	c := session.DB("taskmaster").C("workflows")
+	err := c.Find(nil).All(&workflows)
+
+	return workflows, err
 }
 
-func CreateWorkflow(workflow Workflow) (*Workflow, error) {
-	workflow.Id = id.GenerateId()
+func CreateWorkflow(workflow Workflow) (Workflow, error) {
+	session := Store.Session.Clone()
+	defer session.Close()
 
 	for index, stage := range workflow.Stages {
 		if stage.StageTimeout <= 0 {
@@ -126,31 +65,12 @@ func CreateWorkflow(workflow Workflow) (*Workflow, error) {
 		}
 	}
 
-	_, err := redisConnection.JsonClient.JSONArrAppend("workflows", ".", workflow)
+	workflow.Id = id.GenerateId()
 
-	if err != nil {
-		return nil, err
-	}
+	c := session.DB("taskmaster").C("workflows")
+	err := c.Insert(workflow)
 
-	return &workflow, nil
-}
-
-func CreateTask(task Task) (*Task, error) {
-	workflows, err := GetWorkflows()
-
-	if err != nil {
-		return nil, err
-	}
-
-	for _, workflow := range workflows {
-		if workflow.Id == task.WorkflowId {
-			task.Id = id.GenerateId()
-			go addTaskToWorkflow(workflow, task)
-			return &task, nil
-		}
-	}
-
-	return nil, nil
+	return workflow, err
 }
 
 func addTaskToWorkflow(workflow Workflow, task Task) {
@@ -177,9 +97,8 @@ func addTaskToWorkflow(workflow Workflow, task Task) {
 				}
 
 				var messageJson, _ = json.Marshal(reservationMessage)
-				redisConnection.Client.Publish("worker_reservations", string(messageJson))
-
-				logrus.Tracef("Pinged worker %s with task %s", worker.Id, task.Id)
+				RedisClient.Publish("worker_reservations", string(messageJson))
+				logrus.Tracef("Matched worker %s with task %s", worker.Id, task.Id)
 			}
 
 			time.Sleep(evaluationInterval * time.Second)
