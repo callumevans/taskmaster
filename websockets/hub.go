@@ -16,26 +16,56 @@ type Hub struct {
 	clients map[*Client]bool
 
 	// Inbound messages from the clients.
-	broadcast chan []byte
+	receive chan InboundMessage
 
 	// Register requests from the clients.
 	register chan *Client
 
 	// Unregister requests from clients.
 	unregister chan *Client
+
+	functionHandlers map[string]func(InboundMessage)
 }
 
-type Message struct {
+type OutboundMessage struct {
 	TargetWorker string `json:"targetWorker"`
+	MessageType string `json:"messageType"`
+	Message map[string]interface{} `json:"message"`
+}
+
+type InboundMessage struct {
+	WorkerId string `json:"workerId"`
+	MessageType string `json:"messageType"`
 	Message map[string]interface{} `json:"message"`
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
+		receive:    	  make(chan InboundMessage),
+		register:   	  make(chan *Client),
+		unregister:       make(chan *Client),
+		clients:    	  make(map[*Client]bool),
+		functionHandlers: make(map[string]func(InboundMessage)),
+	}
+}
+
+func (h *Hub) On(messageType string, handler func(InboundMessage)) {
+	h.functionHandlers[messageType] = handler
+}
+
+func (h *Hub) Broadcast(message OutboundMessage) {
+	for client := range h.clients {
+		if client.workerId == message.TargetWorker || message.TargetWorker == "" {
+			logrus.Tracef("Broadcasting message %s", message)
+			bytes, _ := json.Marshal(message)
+
+			select {
+			case client.send <- bytes:
+			default:
+				close(client.send)
+				delete(h.clients, client)
+			}
+		}
 	}
 }
 
@@ -49,28 +79,9 @@ func (h *Hub) Run() {
 				delete(h.clients, client)
 				close(client.send)
 			}
-		case message := <-h.broadcast:
-			logrus.Tracef("Hub broadcasting message: %s", message)
-
-			var parsedMessage Message
-			err := json.Unmarshal(message, &parsedMessage)
-
-			if err != nil {
-				logrus.Errorf("Error parsing broadcast message: %S", err.Error())
-				continue
-			}
-
-			for client := range h.clients {
-				if client.workerId == parsedMessage.TargetWorker || parsedMessage.TargetWorker == "" {
-					logrus.Tracef("Broadcasting message %s to Worker %s", message, client.workerId)
-					select {
-					case client.send <- message:
-					default:
-						close(client.send)
-						delete(h.clients, client)
-					}
-				}
-			}
+		case message := <-h.receive:
+			logrus.Tracef("Hub message received: %s", message)
+			h.functionHandlers[message.MessageType](message)
 		}
 	}
 }

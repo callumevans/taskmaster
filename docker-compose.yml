@@ -2,21 +2,12 @@ version: '3'
 services:
   taskmaster:
     build: .
-    networks:
-      - default
     ports:
       - "5000:5000"
-    links:
-      - redis
-      - mongo
     depends_on:
       - redis
       - mongo
   redis:
     image: redis
-    networks:
-      - default
   mongo:
     image: mongo
-    networks:
-      - default

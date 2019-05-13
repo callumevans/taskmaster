@@ -1,6 +1,10 @@
 package websockets
 
-import "github.com/go-redis/redis"
+import (
+	"encoding/json"
+	"github.com/go-redis/redis"
+	"github.com/sirupsen/logrus"
+)
 
 func ListenForReservations(redis *redis.Client, hub *Hub) {
 	pubsub := redis.Subscribe("worker_reservations")
@@ -14,6 +18,13 @@ func ListenForReservations(redis *redis.Client, hub *Hub) {
 	ch := pubsub.Channel()
 
 	for msg := range ch {
-		hub.broadcast <- []byte(msg.Payload)
+		var parsedInbound OutboundMessage
+		err := json.Unmarshal([]byte(msg.Payload), &parsedInbound)
+
+		if err != nil {
+			logrus.Errorf("Error parsing inbound message %s. %s", msg.Payload, err.Error())
+		} else {
+			hub.Broadcast(parsedInbound)
+		}
 	}
 }

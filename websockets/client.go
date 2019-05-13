@@ -6,6 +6,7 @@ package websockets
 
 import (
 	"bytes"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -76,7 +77,10 @@ func (c *Client) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
+
+		var parsedMessage InboundMessage
+		json.Unmarshal(message, &parsedMessage)
+		c.hub.receive <- parsedMessage
 	}
 }
 
