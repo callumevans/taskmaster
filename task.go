@@ -33,7 +33,7 @@ func CreateTask(task Task) (*Task, error) {
 	return nil, nil
 }
 
-func AddTaskToWorker(workerId string, task Task) error  {
+func AddTaskToWorker(workerId string, task Task) error {
 	session := Store.Session.Clone()
 	defer session.Close()
 
@@ -81,7 +81,7 @@ func addTaskToWorkflow(workflow Workflow, task Task) {
 			for _, worker := range stageWorkers {
 				var reservationMessage = websockets.OutboundMessage{
 					TargetWorker: worker.Id,
-					MessageType:  TaskReservationCreated,
+					MessageType: TaskReservationCreated,
 					Message: map[string]interface{}{
 						"Task": task,
 					},

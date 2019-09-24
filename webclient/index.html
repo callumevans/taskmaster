@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Taskmaster Client</title>
+    <script type="text/javascript">
+        window.onload = function () {
+            let conn;
+
+            if (window["WebSocket"]) {
+                conn = new WebSocket("ws://localhost:5000/ws?workerId=RDAWWM9P5K58WMLHAOQKOEVANVP85L");
+
+                conn.onclose = function (evt) {
+                    console.log('Connection closed', evt)
+                };
+
+                conn.onmessage = function (evt) {
+                    console.log('Message received', evt)
+                };
+            }
+        }
+    </script>
+</head>
+<body>
+</body>
+</html>

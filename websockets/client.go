@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -133,15 +134,23 @@ func (c *Client) writePump() {
 // serveWs handles websocket requests from the peer.
 func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
+
 	if err != nil {
-		log.Println(err)
+		logrus.Error(err)
 		return
 	}
+
+	if len(r.FormValue("workerId")) < 1 {
+		logrus.Error("No WorkerId provided")
+		return
+	}
+
+	logrus.Tracef("Worker %s connecting", r.FormValue("workerId"))
 
 	client := &Client{
 		hub: hub,
 		conn: conn,
-		workerId: websocket.Subprotocols(r)[1],
+		workerId: r.FormValue("workerId"),
 		send: make(chan []byte, 256),
 	}
 

@@ -122,6 +122,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/globalsign/mgo",
+    "github.com/globalsign/mgo/bson",
     "github.com/go-redis/redis",
     "github.com/gorilla/mux",
     "github.com/gorilla/websocket",
