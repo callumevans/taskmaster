@@ -99,7 +99,7 @@ func addTaskToWorkflow(workflow Workflow, task Task) {
 			TargetWorker: "",
 			MessageType: TaskStageTimeout,
 			Message: map[string]interface{}{
-				"TaskId": task.Id,
+				"Task": task,
 			},
 		})
 	}
@@ -110,7 +110,7 @@ func addTaskToWorkflow(workflow Workflow, task Task) {
 		TargetWorker: "",
 		MessageType: TaskWorkflowTimeout,
 		Message: map[string]interface{}{
-			"TaskId": task.Id,
+			"Task": task,
 		},
 	})
 }
