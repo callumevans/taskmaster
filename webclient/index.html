@@ -2,24 +2,13 @@
 <html lang="en">
 <head>
     <title>Taskmaster Client</title>
-    <script type="text/javascript">
-        window.onload = function () {
-            let conn;
-
-            if (window["WebSocket"]) {
-                conn = new WebSocket("ws://localhost:5000/ws?workerId=RDAWWM9P5K58WMLHAOQKOEVANVP85L");
-
-                conn.onclose = function (evt) {
-                    console.log('Connection closed', evt)
-                };
-
-                conn.onmessage = function (evt) {
-                    console.log('Message received', evt)
-                };
-            }
-        }
-    </script>
+    <script type="text/javascript" src="script.js"></script>
 </head>
 <body>
+<script type="text/javascript">
+    const tm = new Taskmaster.Client('localhost:5000', 'MY5P9JEERJWJMZX1BGY5DADBJJX7Q5');
+    console.log(tm);
+</script>
+
 </body>
 </html>

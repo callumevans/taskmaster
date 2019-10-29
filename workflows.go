@@ -43,6 +43,10 @@ func GetWorkflows() ([]Workflow, error) {
 	c := session.DB("taskmaster").C("workflows")
 	err := c.Find(nil).All(&workflows)
 
+	if workflows == nil {
+		return []Workflow{}, err
+	}
+
 	return workflows, err
 }
 

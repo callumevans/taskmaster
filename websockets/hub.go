@@ -54,9 +54,10 @@ func (h *Hub) On(messageType string, handler func(InboundMessage)) {
 }
 
 func (h *Hub) Broadcast(message OutboundMessage) {
+	logrus.Tracef("Broadcasting message %s", message)
+
 	for client := range h.clients {
 		if client.workerId == message.TargetWorker || message.TargetWorker == "" {
-			logrus.Tracef("Broadcasting message %s", message)
 			bytes, _ := json.Marshal(message)
 
 			select {

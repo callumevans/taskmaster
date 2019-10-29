@@ -17,6 +17,8 @@ var RedisClient *redis.Client
 const (
 	TaskReservationCreated 	= "task.reservation_created"
 	TaskAccepted          	= "task.accepted"
+	TaskWorkflowTimeout		= "task.workflow_timeout"
+	TaskStageTimeout		= "task.stage_timeout"
 )
 
 func main() {
@@ -35,16 +37,12 @@ func main() {
 
 	hub := websockets.NewHub()
 
-	hub.On(TaskReservationCreated, func(message websockets.InboundMessage) {
-		fmt.Println("Task reservation created")
-	})
-
 	hub.On(TaskAccepted, func(message websockets.InboundMessage) {
 		fmt.Println("Task accepted")
 	})
 
 	go hub.Run()
-	go websockets.ListenForReservations(RedisClient, hub)
+	go websockets.ListenForMessages(RedisClient, hub)
 
 	StartApi(5000, hub)
 }

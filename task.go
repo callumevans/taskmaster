@@ -79,24 +79,43 @@ func addTaskToWorkflow(workflow Workflow, task Task) {
 			}
 
 			for _, worker := range stageWorkers {
-				var reservationMessage = websockets.OutboundMessage{
+				logrus.Tracef("Matched worker %s with task %s", worker.Id, task.Id)
+
+				sendMessage(websockets.OutboundMessage{
 					TargetWorker: worker.Id,
 					MessageType: TaskReservationCreated,
 					Message: map[string]interface{}{
 						"Task": task,
 					},
-				}
-
-				var messageJson, _ = json.Marshal(reservationMessage)
-				RedisClient.Publish("worker_reservations", string(messageJson))
-				logrus.Tracef("Matched worker %s with task %s", worker.Id, task.Id)
+				})
 			}
 
 			time.Sleep(evaluationInterval * time.Second)
 		}
 
 		logrus.Tracef("Workflow %s stage %d timed out for task %s.", workflow.Id, stage.Order, task.Id)
+
+		sendMessage(websockets.OutboundMessage{
+			TargetWorker: "",
+			MessageType: TaskStageTimeout,
+			Message: map[string]interface{}{
+				"TaskId": task.Id,
+			},
+		})
 	}
 
 	logrus.Tracef("Workflow %s timed out for task %s.", workflow.Id, task.Id)
+
+	sendMessage(websockets.OutboundMessage{
+		TargetWorker: "",
+		MessageType: TaskWorkflowTimeout,
+		Message: map[string]interface{}{
+			"TaskId": task.Id,
+		},
+	})
+}
+
+func sendMessage(message websockets.OutboundMessage)  {
+	var messageJson, _ = json.Marshal(message)
+	RedisClient.Publish("taskmaster_messages", string(messageJson))
 }

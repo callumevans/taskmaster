@@ -16,6 +16,10 @@ func GetWorkers() ([]Worker, error) {
 	c := session.DB("taskmaster").C("workers")
 	err := c.Find(nil).All(&workers)
 
+	if workers == nil {
+		return []Worker{}, err
+	}
+
 	return workers, err
 }
 

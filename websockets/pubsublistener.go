@@ -6,8 +6,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func ListenForReservations(redis *redis.Client, hub *Hub) {
-	pubsub := redis.Subscribe("worker_reservations")
+func ListenForMessages(redis *redis.Client, hub *Hub) {
+	pubsub := redis.Subscribe("taskmaster_messages")
 
 	_, err := pubsub.Receive()
 
